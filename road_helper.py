@@ -5,6 +5,7 @@ from shapely.geometry import Point, LineString, MultiLineString
 class RoadHelper:
 
     def __init__(self, road: Road) -> None:
+        self.road = road
         self.road_shp = list(road.lanes.values())
         self._initialize_shapely_road_representation()
 

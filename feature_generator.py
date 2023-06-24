@@ -4,24 +4,24 @@ from sklearn import svm
 
 from road_helper import RoadHelper
 from utils import Scenario, Vehicle, AnnotationEntry, convert_to_vehicle_frame, split_vf_for_ego, find_back_id, \
-    find_front_id, find_left_back_id, find_left_front_id, find_vehicle_in_frame
+    find_front_id, find_left_back_id, find_left_front_id, find_vehicle_in_frame, Traffic
 
 
 class FeatureGenerator:
-    def __init__(self, scenario: Scenario, window_size: int, use_potential_feature: bool = True) -> None:
+    def __init__(self, traffic: Traffic, window_size: int,  road_helper: RoadHelper, use_potential_feature: bool = True,) -> None:
         if window_size % 2 != 0:
             raise ValueError('Window size must be even')
 
         self.window_size = window_size
         self.use_potential_feature = use_potential_feature
-        self.scenario = scenario
+        self.traffic = traffic
 
-        self.road_helper = RoadHelper(road=scenario.road)
+        self.road_helper = road_helper
 
         self.model = None
 
     def _compute_output_matrix_for_vehicle_annotation(self, vehicle_annotation: AnnotationEntry) -> np.ndarray:
-        vehicle = self.scenario.traffic.find_vehicle_with_id_and_containing_frames(veh_id=vehicle_annotation.vehicle_id,
+        vehicle = self.traffic.find_vehicle_with_id_and_containing_frames(veh_id=vehicle_annotation.vehicle_id,
                                                                                    frame_s=vehicle_annotation.index_start,
                                                                                    frame_end=vehicle_annotation.index_end)
         Y = np.empty((0, 1))
@@ -32,41 +32,25 @@ class FeatureGenerator:
 
         return Y
 
-    def _compute_input_matrix_for_vehicle(self, vehicle: Vehicle) -> np.ndarray:
-        closest_distance_to_line_line = self.road_helper.closest_distance_to_lane_line(s=vehicle.s,
-                                                                                       d=vehicle.d)
 
-        lateral_velocity = vehicle.vd
-
-        # For ghost frames we assume the closest distance is the same and lateral velocity is zero
-        to_padd = self.window_size / 2
-
-        closest_distance_start = closest_distance_to_line_line[0]
-        closest_distance_end = closest_distance_to_line_line[-1]
-        closest_distance_to_line_line_with_ghost_frames = np.hstack((np.repeat(closest_distance_start, to_padd),
-                                                                     closest_distance_to_line_line,
-                                                                     np.repeat(closest_distance_end, to_padd)))
-        lateral_velocity_with_ghost_frames = np.hstack((np.repeat(0, to_padd),
-                                                        lateral_velocity,
-                                                        np.repeat(0, to_padd)))
-        X = np.empty((0, 2 * (self.window_size + 1)))
-
-        for f in range(len(vehicle.frames)):
-            x_dist = closest_distance_to_line_line_with_ghost_frames[f:f + self.window_size + 1]
-            x_vel = lateral_velocity_with_ghost_frames[f:f + self.window_size + 1]
-
-            x = np.hstack((x_dist, x_vel))
-            X = np.vstack((X, x))
-
-        return X
-
-    def _append_potential_feature(self, X: np.ndarray, vehicle: Vehicle) -> np.ndarray:
-        to_padd = self.window_size / 2
-
+    def _append_potential_feature(self, to_pad, X: np.ndarray, vehicle: Vehicle) -> np.ndarray:
         potentials = [self.get_potential_feature(vehicle.object_id, f) for f in vehicle.frames]
 
         if np.any(np.isnan(potentials)):
             raise ValueError
+
+        potentials_with_ghost_frames = np.hstack((np.repeat(potentials[0], to_pad),
+                                                  potentials,
+                                                  np.repeat(potentials[-1], to_pad)))
+
+        X_potential = np.empty((0, 1 * (self.window_size + 1)))
+
+        for f in range(len(vehicle.frames)):
+            x_pot = potentials_with_ghost_frames[f: f + self.window_size + 1]
+            X_potential = np.vstack((X_potential, x_pot))
+
+
+        return np.hstack((X, X_potential))
 
 
 
@@ -98,7 +82,6 @@ class FeatureGenerator:
         for f in range(len(vehicle.frames)):
             x_dist = closest_distance_to_line_line_with_ghost_frames[f:f + self.window_size + 1]
             x_vel = lateral_velocity_with_ghost_frames[f:f + self.window_size + 1]
-            # x_pot = potentials_with_ghost_frames[f: f + self.window_size + 1]
 
             x = np.hstack((x_dist, x_vel))
             X = np.vstack((X, x))
@@ -106,29 +89,15 @@ class FeatureGenerator:
         if self.use_potential_feature is False:
             return X
 
-        potentials = [self.get_potential_feature(vehicle.object_id, f) for f in vehicle.frames]
-
-        if np.any(np.isnan(potentials)):
-            raise ValueError
-
-        potentials_with_ghost_frames = np.hstack((np.repeat(potentials[0], to_padd),
-                                                  closest_distance_to_line_line,
-                                                  np.repeat(potentials[-1], to_padd)))
-
-        X_potential = np.empty((0, 1 * (self.window_size + 1)))
-
-        for f in range(len(vehicle.frames)):
-            x_pot = potentials_with_ghost_frames[f: f + self.window_size + 1]
-            X_potential = np.vstack((X_potential, x_pot))
-
-
-        return np.hstack((X, X_potential))
+        return self._append_potential_feature(to_pad=to_padd,
+                                              vehicle=vehicle,
+                                              X=X)
 
     def get_potential_feature(self, ego_id: int, frame: int) -> float:
         vehicle_frame = convert_to_vehicle_frame(ego_id=ego_id,
                                                  frame=frame,
-                                                 vehicles=self.scenario.traffic.vehicles,
-                                                 lane_lines=list(self.scenario.road.lanes.values()))
+                                                 vehicles=self.traffic.vehicles,
+                                                 lane_lines=list(self.road_helper.road.lanes.values()))
 
         ego, fellows = split_vf_for_ego(vehicle_frame)
 
@@ -170,6 +139,30 @@ class FeatureGenerator:
 
         return np.log(Uc) - np.log(Un)
 
+    def create_input_and_output_matrices(self, annotations: list[AnnotationEntry]):
+        if self.use_potential_feature is True:
+            XX = np.empty((0, 3 * (self.window_size + 1)))
+        else:
+            XX = np.empty((0, 2 * (self.window_size + 1)))
+
+        YY = np.empty((0, 1))
+
+        for v in annotations:
+            try:
+                vehicle = self.traffic.find_vehicle_with_id_and_containing_frames(veh_id=v.vehicle_id,
+                                                                                           frame_s=v.index_start,
+                                                                                           frame_end=v.index_end)
+
+                X = self._compute_input_matrix_for_vehicle_with_potential(vehicle=vehicle)
+                Y = self._compute_output_matrix_for_vehicle_annotation(vehicle_annotation=v)
+            except AssertionError:
+                continue
+
+            XX = np.vstack((XX, X))
+            YY = np.vstack((YY, Y))
+
+        return XX, YY
+
     def ff(self, vv: list[AnnotationEntry]):
         # XX = np.empty((0, 2 * (self.window_size + 1)))
         XX = np.empty((0, 3 * (self.window_size + 1)))
@@ -178,7 +171,7 @@ class FeatureGenerator:
 
         for v in vv:
             try:
-                vehicle = self.scenario.traffic.find_vehicle_with_id_and_containing_frames(veh_id=v.vehicle_id,
+                vehicle = self.traffic.find_vehicle_with_id_and_containing_frames(veh_id=v.vehicle_id,
                                                                                            frame_s=v.index_start,
                                                                                            frame_end=v.index_end)
 
@@ -195,9 +188,9 @@ class FeatureGenerator:
 
         self.model = clf
 
-        vehicle_to_test = self.scenario.traffic.vehicles[-4]
+        vehicle_to_test = self.traffic.vehicles[-4]
 
-        for vehicle_to_test in self.scenario.traffic.vehicles[1000:1050]:
+        for vehicle_to_test in self.traffic.vehicles[1000:1050]:
             x_to_test = self._compute_input_matrix_for_vehicle_with_potential(vehicle=vehicle_to_test)
 
             a = clf.predict(x_to_test)
@@ -207,7 +200,7 @@ class FeatureGenerator:
 
             import matplotlib.pyplot as plt
 
-            for r in self.scenario.road.lanes.values():
+            for r in self.road_helper.road.lanes.values():
                 plt.plot(r.x, r.y, c='b')
 
             plt.plot(vehicle_to_test.s, vehicle_to_test.d)
