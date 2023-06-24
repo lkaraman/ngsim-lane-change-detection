@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "ngsim"
+version = "0.1.0"
+description = ""
+authors = ["lkaraman <lkaraman@dspace.de>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+matplotlib = "^3.7.1"
+shapely = "^2.0.1"
+pandas = "^1.5.3"
+rdp = "^0.8"
+pyshp = "^2.3.1"
+dacite = "^1.8.0"
+scikit-learn = "^1.2.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
