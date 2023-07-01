@@ -10,18 +10,12 @@ from DataAnnotator.Utilities.commons import calculate_route_s_and_d
 from shapely import LineString
 
 
-def calculate_velocity(driven_distance, time):
-    """
-    Calculates the velocities for every frame with regard to the driven distance.
-    :param driven_distance: 1-dim vector of the driven distances (cumulated)
-    :param time: 1-dim time vector
-    :return: 1-dim velocity vector
-    """
-    driven_distance = np.asarray(driven_distance)
-    time = np.asarray(time)
-    if not driven_distance.shape == time.shape:
-        raise ValueError('The dimensions of the arguments are not matching')
-    dist_diff = np.diff(driven_distance)
+def get_velocity(distance, time) -> list[float]:
+    distance = np.array(distance)
+    time = np.array(time)
+    if not distance.shape == time.shape:
+        raise ValueError('Mismatch between time and position dimensions!')
+    dist_diff = np.diff(distance)
     time_diff = np.diff(time)
     velocity = np.append(dist_diff[0] / time_diff[0], dist_diff / time_diff)
     return velocity.tolist()
@@ -120,11 +114,11 @@ def convert_dataframe_to_vehicle(df, road: Road, initial_time) -> Vehicle:
 
     times = list(np.arange(0, len(x)) * 0.1 + times[0])
 
-    vel_lon = calculate_velocity(driven_distance=r[0],
-                                 time=times)
+    vel_lon = get_velocity(distance=r[0],
+                           time=times)
 
-    vel_lat = calculate_velocity(driven_distance=r[1],
-                                 time=times)
+    vel_lat = get_velocity(distance=r[1],
+                           time=times)
 
     lanes = [current_lane(i, list(road.lanes.values())) for i in r[-1]]
 
@@ -293,70 +287,6 @@ def split_vf_for_ego(vfl: List[VehicleFrame]) -> (VehicleFrame, List[VehicleFram
     ego = ego[0]
 
     return ego, fellows
-
-
-def find_back_id(ego: VehicleFrame, fellows: List[VehicleFrame]) -> int:
-    ego_s = ego.s
-    ego_lane = ego.lane
-
-    rel_s = []
-    for f in fellows:
-        if ego_lane == f.lane and ego_s > f.s:
-            rel_s.append((f.object_id, abs(ego_s - f.s)))
-
-    if len(rel_s) == 0:
-        return -1
-
-    m = min(rel_s, key=lambda x: x[1])
-    return m[0]
-
-
-def find_front_id(ego: VehicleFrame, fellows: List[VehicleFrame]) -> int:
-    ego_s = ego.s
-    ego_lane = ego.lane
-
-    rel_s = []
-    for f in fellows:
-        if ego_lane == f.lane and ego_s < f.s:
-            rel_s.append((f.object_id, abs(ego_s - f.s)))
-
-    if len(rel_s) == 0:
-        return -1
-
-    m = min(rel_s, key=lambda x: x[1])
-    return m[0]
-
-
-def find_left_front_id(ego: VehicleFrame, fellows: List[VehicleFrame]) -> int:
-    ego_s = ego.s
-    ego_lane = ego.lane
-
-    rel_s = []
-    for f in fellows:
-        if ego_lane == (f.lane + 1) and ego_s < f.s:
-            rel_s.append((f.object_id, abs(ego_s - f.s)))
-
-    if len(rel_s) == 0:
-        return -1
-
-    m = min(rel_s, key=lambda x: x[1])
-    return m[0]
-
-
-def find_left_back_id(ego: VehicleFrame, fellows: List[VehicleFrame]) -> int:
-    ego_s = ego.s
-    ego_lane = ego.lane
-
-    rel_s = []
-    for f in fellows:
-        if ego_lane == (f.lane + 1) and ego_s > f.s:
-            rel_s.append((f.object_id, abs(ego_s - f.s)))
-
-    if len(rel_s) == 0:
-        return -1
-
-    m = min(rel_s, key=lambda x: x[1])
-    return m[0]
 
 
 def find_vehicle_in_frame(veh_id: int, veh_frames: list[VehicleFrame]):

@@ -2,7 +2,7 @@
 name = "ngsim"
 version = "0.1.0"
 description = ""
-authors = ["lkaraman <lkaraman@dspace.de>"]
+authors = ["lkaraman"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
