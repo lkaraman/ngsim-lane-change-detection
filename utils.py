@@ -162,7 +162,7 @@ class VehicleFrame:
     width: float
     length: float
     velocity: float
-    yaw: Optional[float] = None
+    yaw: Optional[float] = 0
 
 
 @dataclass

@@ -7,7 +7,8 @@ import numpy as np
 from sympy.utilities.lambdify import lambdify
 
 from trajectory_predictor import TrajectoryPredictor
-from utils import VehicleFrame, SurroundingVehicles, Trajectory, SemanticPosition
+from utils import VehicleFrame, SurroundingVehicles, Trajectory, SemanticPosition, SemanticFrames
+from visualize_predicted import PredictVisualizer
 
 wgx = 0.5
 wgy = 0.0
@@ -128,7 +129,7 @@ if __name__ == '__main__':
         is_ego=False,
         width=2,
         length=2,
-        velocity=20
+        velocity=30
     )
 
     vehicle_next_lane_front = VehicleFrame(
@@ -150,7 +151,7 @@ if __name__ == '__main__':
         is_ego=True,
         width=2,
         length=4,
-        velocity=30
+        velocity=20
     )
 
     surrounding_vehicle_frame = {
@@ -171,7 +172,7 @@ if __name__ == '__main__':
     x_l = [x]
     y_l = [y]
 
-    for i in range(25):
+    for i in range(100):
         x = x + f1(x, y)
         y = y + f2(x, y)
 
@@ -191,9 +192,14 @@ if __name__ == '__main__':
     tp = TrajectoryPredictor(relevant_frames=surrounding_vehicle_frame,
                              trajectory=Trajectory(x=x_l, y=y_l))
 
-    a = tp.predict_for_dt(dt=0.2)
+    for i in np.arange(0.1, 4, 0.1):
 
+        tp.predict_for_dt(dt=i)
+        tp.is_collision_in_predicted()
 
+    print(tp.collision_info)
+
+    vis = PredictVisualizer(tp.predicted_states, gradient_fnc=(f1, f2), traj=(x_l, y_l))
 
 
 

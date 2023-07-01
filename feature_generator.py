@@ -190,7 +190,7 @@ class FeatureGenerator:
 
         vehicle_to_test = self.traffic.vehicles[-4]
 
-        for vehicle_to_test in self.traffic.vehicles[1000:1050]:
+        for vehicle_to_test in self.traffic.vehicles[1900:2000]:
             x_to_test = self._compute_input_matrix_for_vehicle_with_potential(vehicle=vehicle_to_test)
 
             a = clf.predict(x_to_test)
