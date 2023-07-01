@@ -1,8 +1,21 @@
+from dataclasses import dataclass
+
 import sympy as sp
 from sympy.tensor.array import derive_by_array
 import matplotlib.pyplot as plt
 import numpy as np
 from sympy.utilities.lambdify import lambdify
+
+from utils import VehicleFrame
+
+
+@dataclass(frozen=True)
+class SurroundingVehicles:
+    vehicle_current_lane_front: VehicleFrame
+    vehicle_current_lane_back: VehicleFrame
+    vehicle_next_lane_front: VehicleFrame
+    vehicle_next_lane_back: VehicleFrame
+
 
 wgx = 0.5
 wgy = 0.0
@@ -55,36 +68,120 @@ class TrajectoryPlanner:
 
         return res
 
+    def get_field_functions(self, surrounding_vehicles: SurroundingVehicles, dU):
+        g1 = dU[0].subs([
+            [self.l_up, 3.5],
+            [self.l_down, 0],
+            [self.x_other[0], surrounding_vehicles.vehicle_current_lane_back.s],
+            [self.y_other[0], surrounding_vehicles.vehicle_current_lane_back.d],
+            [self.x_other[1], surrounding_vehicles.vehicle_current_lane_front.s],
+            [self.y_other[1], surrounding_vehicles.vehicle_current_lane_front.d],
+            [self.x_other[2], surrounding_vehicles.vehicle_next_lane_back.s],
+            [self.y_other[2], surrounding_vehicles.vehicle_next_lane_back.d],
+            [self.x_other[3], surrounding_vehicles.vehicle_next_lane_front.s],
+            [self.y_other[3], surrounding_vehicles.vehicle_next_lane_front.d],
+        ])
+
+        g2 = dU[1].subs([
+            [self.l_up, 3.5],
+            [self.l_down, 0],
+            [self.x_other[0], surrounding_vehicles.vehicle_current_lane_back.s],
+            [self.y_other[0], surrounding_vehicles.vehicle_current_lane_back.d],
+            [self.x_other[1], surrounding_vehicles.vehicle_current_lane_front.s],
+            [self.y_other[1], surrounding_vehicles.vehicle_current_lane_front.d],
+            [self.x_other[2], surrounding_vehicles.vehicle_next_lane_back.s],
+            [self.y_other[2], surrounding_vehicles.vehicle_next_lane_back.d],
+            [self.x_other[3], surrounding_vehicles.vehicle_next_lane_front.s],
+            [self.y_other[3], surrounding_vehicles.vehicle_next_lane_front.d],
+        ])
+
+
+        f1 = lambdify([tp.x, tp.y], g1)
+        f2 = lambdify([tp.x, tp.y], g2)
+
+        return f1, f2
+
 
 if __name__ == '__main__':
     tp = TrajectoryPlanner()
     dU = tp.get_der_function()
 
+    vehicle_current_lane_back = VehicleFrame(
+        object_id=0,
+        s=-5,
+        d=1.75,
+        lane=0,
+        is_ego=False,
+        width=2,
+        length=2,
+        velocity=20
+    )
+
+    vehicle_current_lane_front = VehicleFrame(
+        object_id=1,
+        s=5,
+        d=1.75,
+        lane=0,
+        is_ego=False,
+        width=2,
+        length=2,
+        velocity=20
+    )
+
+    vehicle_next_lane_back = VehicleFrame(
+        object_id=2,
+        s=-7,
+        d=-1.75,
+        lane=0,
+        is_ego=False,
+        width=2,
+        length=2,
+        velocity=20
+    )
+
+    vehicle_next_lane_front = VehicleFrame(
+        object_id=3,
+        s=3,
+        d=-1.75,
+        lane=0,
+        is_ego=False,
+        width=2,
+        length=2,
+        velocity=20
+    )
+
+    surrounding_vehicles = SurroundingVehicles(
+        vehicle_current_lane_back=vehicle_current_lane_back,
+        vehicle_current_lane_front=vehicle_current_lane_front,
+        vehicle_next_lane_back=vehicle_next_lane_back,
+        vehicle_next_lane_front=vehicle_next_lane_front,
+    )
+
 
     g1 = dU[0].subs([
         [tp.l_up, 3.5],
         [tp.l_down, 0],
-        [tp.x_other[0], -5],
-        [tp.y_other[0], 1.75],
-        [tp.x_other[1], 5],
-        [tp.y_other[1], 1.75],
-        [tp.x_other[2], -7],
-        [tp.y_other[2], -1.75],
-        [tp.x_other[3], 3],
-        [tp.y_other[3], -1.75],
+        [tp.x_other[0], surrounding_vehicles.vehicle_current_lane_back.s],
+        [tp.y_other[0], surrounding_vehicles.vehicle_current_lane_back.d],
+        [tp.x_other[1], surrounding_vehicles.vehicle_current_lane_front.s],
+        [tp.y_other[1], surrounding_vehicles.vehicle_current_lane_front.d],
+        [tp.x_other[2], surrounding_vehicles.vehicle_next_lane_back.s],
+        [tp.y_other[2], surrounding_vehicles.vehicle_next_lane_back.d],
+        [tp.x_other[3], surrounding_vehicles.vehicle_next_lane_front.s],
+        [tp.y_other[3], surrounding_vehicles.vehicle_next_lane_front.d],
     ])
 
     g2 = dU[1].subs([
         [tp.l_up, 3.5],
         [tp.l_down, 0],
-        [tp.x_other[0], -5],
-        [tp.y_other[0], 1.75],
-        [tp.x_other[1], 5],
-        [tp.y_other[1], 1.75],
-        [tp.x_other[2], -7],
-        [tp.y_other[2], -1.75],
-        [tp.x_other[3], 3],
-        [tp.y_other[3], -1.75],
+        [tp.x_other[0], surrounding_vehicles.vehicle_current_lane_back.s],
+        [tp.y_other[0], surrounding_vehicles.vehicle_current_lane_back.d],
+        [tp.x_other[1], surrounding_vehicles.vehicle_current_lane_front.s],
+        [tp.y_other[1], surrounding_vehicles.vehicle_current_lane_front.d],
+        [tp.x_other[2], surrounding_vehicles.vehicle_next_lane_back.s],
+        [tp.y_other[2], surrounding_vehicles.vehicle_next_lane_back.d],
+        [tp.x_other[3], surrounding_vehicles.vehicle_next_lane_front.s],
+        [tp.y_other[3], surrounding_vehicles.vehicle_next_lane_front.d],
     ])
 
     x = 0
@@ -94,11 +191,13 @@ if __name__ == '__main__':
     y_l = [y]
 
 
+    f1, f2 = tp.get_field_functions(surrounding_vehicles=surrounding_vehicles,
+                                    dU=dU)
 
     X, Y = np.meshgrid(np.linspace(-10, 10, 20), np.linspace(-5, 5, 20))
 
-    f1 = lambdify([tp.x, tp.y], g1)
-    f2 = lambdify([tp.x, tp.y], g2)
+    # f1 = lambdify([tp.x, tp.y], g1)
+    # f2 = lambdify([tp.x, tp.y], g2)
 
     for i in range(25):
         x = x + f1(x, y)
