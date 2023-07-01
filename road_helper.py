@@ -9,8 +9,6 @@ class RoadHelper:
         self.road_shp = list(road.lanes.values())
         self._initialize_shapely_road_representation()
 
-
-
     def _initialize_shapely_road_representation(self) -> None:
         shps: list[LineString] = []
 
@@ -20,7 +18,6 @@ class RoadHelper:
             )
 
         self.shp_road = MultiLineString(shps)
-
 
     def closest_distance_to_lane_line(self, s, d):
         closest_distances = []

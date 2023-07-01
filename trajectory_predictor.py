@@ -45,7 +45,4 @@ class TrajectoryPredictor:
 
         self.collision_info.extend(collision_info)
 
-    def visualize_predicted_states(self) -> None:
-        frames_total = len(self.predicted_states)
-
 

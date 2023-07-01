@@ -3,8 +3,9 @@ from scipy.special import kn
 from sklearn import svm
 
 from road_helper import RoadHelper
-from utils import Scenario, Vehicle, AnnotationEntry, convert_to_vehicle_frame, split_vf_for_ego, find_back_id, \
-    find_front_id, find_left_back_id, find_left_front_id, find_vehicle_in_frame, Traffic
+from utils import Vehicle, AnnotationEntry, convert_to_vehicle_frame, split_vf_for_ego, find_vehicle_in_frame, Traffic, \
+    find_id_by_semantic_position, \
+    SemanticPosition
 
 
 class FeatureGenerator:
@@ -12,11 +13,11 @@ class FeatureGenerator:
         if window_size % 2 != 0:
             raise ValueError('Window size must be even')
 
-        self.window_size = window_size
-        self.use_potential_feature = use_potential_feature
         self.traffic = traffic
-
+        self.window_size = window_size
         self.road_helper = road_helper
+        self.use_potential_feature = use_potential_feature
+
 
         self.model = None
 
@@ -101,10 +102,10 @@ class FeatureGenerator:
 
         ego, fellows = split_vf_for_ego(vehicle_frame)
 
-        back_id = find_back_id(ego, fellows)
-        front_id = find_front_id(ego, fellows)
-        left_back_id = find_left_back_id(ego, fellows)
-        left_front_id = find_left_front_id(ego, fellows)
+        back_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.SAME_BACK)
+        front_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.SAME_FRONT)
+        left_back_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.NEXT_BACK)
+        left_front_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.NEXT_FRONT)
 
         vehs = (back_id, front_id, left_back_id, left_front_id)
 

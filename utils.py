@@ -366,6 +366,42 @@ def find_vehicle_in_frame(veh_id: int, veh_frames: list[VehicleFrame]):
     return l[0]
 
 
+def find_id_by_semantic_position(ego: VehicleFrame, fellows: List[VehicleFrame], semantic: SemanticPosition) -> int:
+    ego_s = ego.s
+    ego_lane = ego.lane
+
+    if semantic == SemanticPosition.SAME_BACK:
+        condition_lat = lambda f: ego_lane == f.lane
+        condition_long = lambda f: ego_s > f.s
+
+    elif semantic == SemanticPosition.SAME_FRONT:
+        condition_lat = lambda f: ego_lane == f.lane
+        condition_long = lambda f: ego_s < f.s
+
+    elif semantic == SemanticPosition.NEXT_BACK:
+        condition_lat = lambda f: ego_lane == (f.lane + 1)
+        condition_long = lambda f: ego_s > f.s
+
+    elif semantic == SemanticPosition.NEXT_FRONT:
+        condition_lat = lambda f: ego_lane == (f.lane + 1)
+        condition_long = lambda f: ego_s < f.s
+
+    else:
+        raise AttributeError('Semantic position not valid!')
+
+
+    rel_s = []
+    for f in fellows:
+        if condition_lat(f) and condition_long(f):
+            rel_s.append((f.object_id, abs(ego_s - f.s)))
+
+    if len(rel_s) == 0:
+        return -1
+
+    m = min(rel_s, key=lambda x: x[1])
+    return m[0]
+
+
 @dataclass
 class AnnotationEntry:
     vehicle_id: int
