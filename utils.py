@@ -1,10 +1,13 @@
 from dataclasses import dataclass
-from typing import List, Dict
+from enum import Enum, auto
+from typing import List, Dict, Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 from DataAnnotator.Utilities.commons import calculate_route_s_and_d
+
+from shapely import LineString
 
 
 def calculate_velocity(driven_distance, time):
@@ -22,8 +25,6 @@ def calculate_velocity(driven_distance, time):
     time_diff = np.diff(time)
     velocity = np.append(dist_diff[0] / time_diff[0], dist_diff / time_diff)
     return velocity.tolist()
-
-
 
 
 @dataclass
@@ -119,7 +120,6 @@ def convert_dataframe_to_vehicle(df, road: Road, initial_time) -> Vehicle:
 
     times = list(np.arange(0, len(x)) * 0.1 + times[0])
 
-
     vel_lon = calculate_velocity(driven_distance=r[0],
                                  time=times)
 
@@ -142,6 +142,16 @@ def convert_dataframe_to_vehicle(df, road: Road, initial_time) -> Vehicle:
     )
 
 
+
+class SemanticPosition(Enum):
+    EGO = auto()
+    SAME_FRONT = auto()
+    SAME_BACK = auto()
+    NEXT_FRONT = auto()
+    NEXT_BACK = auto()
+    OTHER = auto()
+
+
 @dataclass
 class VehicleFrame:
     object_id: int
@@ -152,6 +162,67 @@ class VehicleFrame:
     width: float
     length: float
     velocity: float
+    yaw: Optional[float] = None
+
+
+@dataclass
+class Trajectory:
+    x: list[float]
+    y: list[float]
+
+    def __post_init__(self):
+        self.shp_traj = LineString([(i, j) for i, j in zip(self.x, self.y)])
+
+    def extrapolate(self, dt: float, v: float) -> tuple[float, float, float]:
+        ds = v * dt
+
+        r = self.shp_traj.interpolate(distance=ds)
+        r_lookahead = self.shp_traj.interpolate(distance=ds + 0.5)
+
+        x, y = r.x, r.y
+        ang = np.arctan2(r_lookahead.y - r.y, r_lookahead.x - r.x)
+
+        return x, y, ang
+
+
+@dataclass
+class VehicleFrameWithInterpolation:
+    vehicle_frame: VehicleFrame
+    trajectory: Optional[Trajectory] = None
+
+    def extrapolate_with_constant_velocity(self, dt: float) -> VehicleFrame:
+        v = self.vehicle_frame.velocity
+
+        if self.trajectory is None:
+            s = self.vehicle_frame.s + self.vehicle_frame.velocity * dt
+            d = self.vehicle_frame.d
+            yaw = 0
+
+        else:
+            s, d, yaw = self.trajectory.extrapolate(dt=dt, v=v)
+
+        return VehicleFrame(
+            object_id=self.vehicle_frame.object_id,
+            s=s,
+            d=d,
+            lane=self.vehicle_frame.lane,
+            is_ego=self.vehicle_frame.is_ego,
+            width=self.vehicle_frame.width,
+            length=self.vehicle_frame.length,
+            velocity=self.vehicle_frame.velocity,
+            yaw=yaw
+        )
+
+SemanticFrames = dict[SemanticPosition, VehicleFrame]
+SemanticFramesExtrapolation = dict[SemanticPosition, VehicleFrameWithInterpolation]
+
+
+@dataclass(frozen=True)
+class SurroundingVehicles:
+    vehicle_current_lane_front: VehicleFrame
+    vehicle_current_lane_back: VehicleFrame
+    vehicle_next_lane_front: VehicleFrame
+    vehicle_next_lane_back: VehicleFrame
 
 
 def current_lane(d, lane_lines: List[Lane]):
@@ -163,8 +234,8 @@ def current_lane(d, lane_lines: List[Lane]):
 
     return current_lane
 
-def convert_to_vehicle_frame(ego_id, frame, vehicles: List[Vehicle], lane_lines) -> List[VehicleFrame]:
 
+def convert_to_vehicle_frame(ego_id, frame, vehicles: List[Vehicle], lane_lines) -> List[VehicleFrame]:
     vehicle_frames = []
 
     def is_ego(id, frm, v: Vehicle):
@@ -174,7 +245,7 @@ def convert_to_vehicle_frame(ego_id, frame, vehicles: List[Vehicle], lane_lines)
         if frame not in v.frames:
             continue
 
-        rel_frm = frame-v.frames[0]
+        rel_frm = frame - v.frames[0]
 
         s0 = v.s[rel_frm]
         d0 = v.d[rel_frm]
@@ -193,6 +264,7 @@ def convert_to_vehicle_frame(ego_id, frame, vehicles: List[Vehicle], lane_lines)
         vehicle_frames.append(veh_frame)
 
     return vehicle_frames
+
 
 def convert_df_to_vf(df_frame, ref_x, ref_y, lane_lines, ego_id) -> List[VehicleFrame]:
     vehicle_frames = []
@@ -254,13 +326,14 @@ def find_front_id(ego: VehicleFrame, fellows: List[VehicleFrame]) -> int:
     m = min(rel_s, key=lambda x: x[1])
     return m[0]
 
+
 def find_left_front_id(ego: VehicleFrame, fellows: List[VehicleFrame]) -> int:
     ego_s = ego.s
     ego_lane = ego.lane
 
     rel_s = []
     for f in fellows:
-        if ego_lane == (f.lane+1) and ego_s < f.s:
+        if ego_lane == (f.lane + 1) and ego_s < f.s:
             rel_s.append((f.object_id, abs(ego_s - f.s)))
 
     if len(rel_s) == 0:
@@ -268,6 +341,7 @@ def find_left_front_id(ego: VehicleFrame, fellows: List[VehicleFrame]) -> int:
 
     m = min(rel_s, key=lambda x: x[1])
     return m[0]
+
 
 def find_left_back_id(ego: VehicleFrame, fellows: List[VehicleFrame]) -> int:
     ego_s = ego.s
@@ -283,6 +357,7 @@ def find_left_back_id(ego: VehicleFrame, fellows: List[VehicleFrame]) -> int:
 
     m = min(rel_s, key=lambda x: x[1])
     return m[0]
+
 
 def find_vehicle_in_frame(veh_id: int, veh_frames: list[VehicleFrame]):
     l = [vf for vf in veh_frames if vf.object_id == veh_id]

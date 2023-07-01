@@ -6,16 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sympy.utilities.lambdify import lambdify
 
-from utils import VehicleFrame
-
-
-@dataclass(frozen=True)
-class SurroundingVehicles:
-    vehicle_current_lane_front: VehicleFrame
-    vehicle_current_lane_back: VehicleFrame
-    vehicle_next_lane_front: VehicleFrame
-    vehicle_next_lane_back: VehicleFrame
-
+from trajectory_predictor import TrajectoryPredictor
+from utils import VehicleFrame, SurroundingVehicles, Trajectory, SemanticPosition
 
 wgx = 0.5
 wgy = 0.0
@@ -68,31 +60,31 @@ class TrajectoryPlanner:
 
         return res
 
-    def get_field_functions(self, surrounding_vehicles: SurroundingVehicles, dU):
+    def get_field_functions(self, surrounding_vehicles_frame: dict[SemanticPosition, VehicleFrame], dU):
         g1 = dU[0].subs([
             [self.l_up, 3.5],
             [self.l_down, 0],
-            [self.x_other[0], surrounding_vehicles.vehicle_current_lane_back.s],
-            [self.y_other[0], surrounding_vehicles.vehicle_current_lane_back.d],
-            [self.x_other[1], surrounding_vehicles.vehicle_current_lane_front.s],
-            [self.y_other[1], surrounding_vehicles.vehicle_current_lane_front.d],
-            [self.x_other[2], surrounding_vehicles.vehicle_next_lane_back.s],
-            [self.y_other[2], surrounding_vehicles.vehicle_next_lane_back.d],
-            [self.x_other[3], surrounding_vehicles.vehicle_next_lane_front.s],
-            [self.y_other[3], surrounding_vehicles.vehicle_next_lane_front.d],
+            [self.x_other[0], surrounding_vehicles_frame[SemanticPosition.SAME_BACK].s],
+            [self.y_other[0], surrounding_vehicles_frame[SemanticPosition.SAME_BACK].d],
+            [self.x_other[1], surrounding_vehicles_frame[SemanticPosition.SAME_FRONT].s],
+            [self.y_other[1], surrounding_vehicles_frame[SemanticPosition.SAME_FRONT].d],
+            [self.x_other[2], surrounding_vehicles_frame[SemanticPosition.NEXT_BACK].s],
+            [self.y_other[2], surrounding_vehicles_frame[SemanticPosition.NEXT_BACK].d],
+            [self.x_other[3], surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT].s],
+            [self.y_other[3], surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT].d],
         ])
 
         g2 = dU[1].subs([
             [self.l_up, 3.5],
             [self.l_down, 0],
-            [self.x_other[0], surrounding_vehicles.vehicle_current_lane_back.s],
-            [self.y_other[0], surrounding_vehicles.vehicle_current_lane_back.d],
-            [self.x_other[1], surrounding_vehicles.vehicle_current_lane_front.s],
-            [self.y_other[1], surrounding_vehicles.vehicle_current_lane_front.d],
-            [self.x_other[2], surrounding_vehicles.vehicle_next_lane_back.s],
-            [self.y_other[2], surrounding_vehicles.vehicle_next_lane_back.d],
-            [self.x_other[3], surrounding_vehicles.vehicle_next_lane_front.s],
-            [self.y_other[3], surrounding_vehicles.vehicle_next_lane_front.d],
+            [self.x_other[0], surrounding_vehicles_frame[SemanticPosition.SAME_BACK].s],
+            [self.y_other[0], surrounding_vehicles_frame[SemanticPosition.SAME_BACK].d],
+            [self.x_other[1], surrounding_vehicles_frame[SemanticPosition.SAME_FRONT].s],
+            [self.y_other[1], surrounding_vehicles_frame[SemanticPosition.SAME_FRONT].d],
+            [self.x_other[2], surrounding_vehicles_frame[SemanticPosition.NEXT_BACK].s],
+            [self.y_other[2], surrounding_vehicles_frame[SemanticPosition.NEXT_BACK].d],
+            [self.x_other[3], surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT].s],
+            [self.y_other[3], surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT].d],
         ])
 
 
@@ -150,54 +142,34 @@ if __name__ == '__main__':
         velocity=20
     )
 
-    surrounding_vehicles = SurroundingVehicles(
-        vehicle_current_lane_back=vehicle_current_lane_back,
-        vehicle_current_lane_front=vehicle_current_lane_front,
-        vehicle_next_lane_back=vehicle_next_lane_back,
-        vehicle_next_lane_front=vehicle_next_lane_front,
+    ego_frame = VehicleFrame(
+        object_id=99,
+        s=0,
+        d=0,
+        lane=0,
+        is_ego=True,
+        width=2,
+        length=4,
+        velocity=30
     )
 
+    surrounding_vehicle_frame = {
+        SemanticPosition.SAME_BACK: vehicle_current_lane_back,
+        SemanticPosition.SAME_FRONT: vehicle_current_lane_front,
+        SemanticPosition.NEXT_BACK: vehicle_next_lane_back,
+        SemanticPosition.NEXT_FRONT: vehicle_next_lane_front,
+        SemanticPosition.EGO: ego_frame
+    }
 
-    g1 = dU[0].subs([
-        [tp.l_up, 3.5],
-        [tp.l_down, 0],
-        [tp.x_other[0], surrounding_vehicles.vehicle_current_lane_back.s],
-        [tp.y_other[0], surrounding_vehicles.vehicle_current_lane_back.d],
-        [tp.x_other[1], surrounding_vehicles.vehicle_current_lane_front.s],
-        [tp.y_other[1], surrounding_vehicles.vehicle_current_lane_front.d],
-        [tp.x_other[2], surrounding_vehicles.vehicle_next_lane_back.s],
-        [tp.y_other[2], surrounding_vehicles.vehicle_next_lane_back.d],
-        [tp.x_other[3], surrounding_vehicles.vehicle_next_lane_front.s],
-        [tp.y_other[3], surrounding_vehicles.vehicle_next_lane_front.d],
-    ])
 
-    g2 = dU[1].subs([
-        [tp.l_up, 3.5],
-        [tp.l_down, 0],
-        [tp.x_other[0], surrounding_vehicles.vehicle_current_lane_back.s],
-        [tp.y_other[0], surrounding_vehicles.vehicle_current_lane_back.d],
-        [tp.x_other[1], surrounding_vehicles.vehicle_current_lane_front.s],
-        [tp.y_other[1], surrounding_vehicles.vehicle_current_lane_front.d],
-        [tp.x_other[2], surrounding_vehicles.vehicle_next_lane_back.s],
-        [tp.y_other[2], surrounding_vehicles.vehicle_next_lane_back.d],
-        [tp.x_other[3], surrounding_vehicles.vehicle_next_lane_front.s],
-        [tp.y_other[3], surrounding_vehicles.vehicle_next_lane_front.d],
-    ])
+    f1, f2 = tp.get_field_functions(surrounding_vehicles_frame=surrounding_vehicle_frame,
+                                    dU=dU)
 
-    x = 0
-    y = 0
+    x = ego_frame.s
+    y = ego_frame.d
 
     x_l = [x]
     y_l = [y]
-
-
-    f1, f2 = tp.get_field_functions(surrounding_vehicles=surrounding_vehicles,
-                                    dU=dU)
-
-    X, Y = np.meshgrid(np.linspace(-10, 10, 20), np.linspace(-5, 5, 20))
-
-    # f1 = lambdify([tp.x, tp.y], g1)
-    # f2 = lambdify([tp.x, tp.y], g2)
 
     for i in range(25):
         x = x + f1(x, y)
@@ -206,6 +178,8 @@ if __name__ == '__main__':
         x_l.append(x)
         y_l.append(y)
 
+    X, Y = np.meshgrid(np.linspace(-10, 10, 20), np.linspace(-5, 5, 20))
+
     U = [f1(x1, y1) for x1, y1 in zip(X, Y)]
     V = [f2(x1, y1) for x1, y1 in zip(X, Y)]
 
@@ -213,5 +187,17 @@ if __name__ == '__main__':
     plt.scatter(x_l, y_l)
     plt.title("vector field")
     plt.show()
+
+    tp = TrajectoryPredictor(relevant_frames=surrounding_vehicle_frame,
+                             trajectory=Trajectory(x=x_l, y=y_l))
+
+    a = tp.predict_for_dt(dt=0.2)
+
+
+
+
+
+
+
 
     pass
