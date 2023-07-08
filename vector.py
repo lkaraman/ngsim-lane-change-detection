@@ -35,6 +35,8 @@ class TrajectoryPlanner:
         self.l_up = sp.symbols('lu')
         self.l_down = sp.symbols('ld')
 
+        self.dU = self.get_der_function()
+
     def compute_ua(self):
         res = 0
         for i in range(4):
@@ -61,8 +63,8 @@ class TrajectoryPlanner:
 
         return res
 
-    def get_field_functions(self, surrounding_vehicles_frame: dict[SemanticPosition, VehicleFrame], dU):
-        g1 = dU[0].subs([
+    def get_field_functions(self, surrounding_vehicles_frame: dict[SemanticPosition, VehicleFrame]):
+        g1 = self.dU[0].subs([
             [self.l_up, 3.5],
             [self.l_down, 0],
             [self.x_other[0], surrounding_vehicles_frame[SemanticPosition.SAME_BACK].s],
@@ -75,7 +77,7 @@ class TrajectoryPlanner:
             [self.y_other[3], surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT].d],
         ])
 
-        g2 = dU[1].subs([
+        g2 = self.dU[1].subs([
             [self.l_up, 3.5],
             [self.l_down, 0],
             [self.x_other[0], surrounding_vehicles_frame[SemanticPosition.SAME_BACK].s],
@@ -97,7 +99,6 @@ class TrajectoryPlanner:
 
 if __name__ == '__main__':
     tp = TrajectoryPlanner()
-    dU = tp.get_der_function()
 
     vehicle_current_lane_back = VehicleFrame(
         object_id=0,
@@ -163,8 +164,7 @@ if __name__ == '__main__':
     }
 
 
-    f1, f2 = tp.get_field_functions(surrounding_vehicles_frame=surrounding_vehicle_frame,
-                                    dU=dU)
+    f1, f2 = tp.get_field_functions(surrounding_vehicles_frame=surrounding_vehicle_frame)
 
     x = ego_frame.s
     y = ego_frame.d
