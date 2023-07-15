@@ -7,6 +7,9 @@ from structs import Trajectory, SemanticPosition, vehicle_far_far_away, VehicleF
 from trajectory_predictor import TrajectoryPredictor
 from visualize_predicted import PredictVisualizer
 
+# --------------------------------
+# Parameters for the planner
+# --------------------------------
 wgx = 0.5
 wgy = 0.0
 ws = 0.5
@@ -15,6 +18,9 @@ wa = 0.5
 theta_ax = 1.0
 theta_ay = 1.0
 theta_s = 1.0
+
+
+# --------------------------------
 
 def gradient(f):
     return (f.diff(x), f.diff(y))
@@ -86,7 +92,6 @@ class TrajectoryPlanner:
             [self.x_other[3], (surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT] or vehicle_far_far_away).s],
             [self.y_other[3], (surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT] or vehicle_far_far_away).d],
         ])
-
 
         f1 = lambdify([self.x, self.y], g1)
         f2 = lambdify([self.x, self.y], g2)
@@ -160,7 +165,6 @@ if __name__ == '__main__':
         SemanticPosition.EGO: ego_frame
     }
 
-
     f1, f2 = tp.get_field_functions(surrounding_vehicles_frame=surrounding_vehicle_frame)
 
     x = ego_frame.s
@@ -190,7 +194,6 @@ if __name__ == '__main__':
                              trajectory=Trajectory(x=x_l, y=y_l))
 
     for i in np.arange(0.1, 4, 0.1):
-
         tp.predict_for_dt(dt=i)
         tp.is_collision_in_predicted()
 

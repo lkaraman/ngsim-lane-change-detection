@@ -16,6 +16,17 @@ from utils import decorate_with_far_vehicles, SemanticPosition
 from utils import Vehicle, \
     get_surrounding_vehicles_frames
 
+# --------------------------------
+# Parameters for the potential feature
+# --------------------------------
+eta = 0.5
+wp = 0.5
+wf = 0.5
+wl = 0.5
+wr = 0.5
+dev = 1
+# --------------------------------
+
 
 class FeatureGenerator:
     def __init__(self, traffic: Traffic, window_size: int, road_helper: RoadHelper,
@@ -104,12 +115,6 @@ class FeatureGenerator:
 
         pot = []
 
-        eta = 0.5
-        wp = 0.5
-        wf = 0.5
-        wl = 0.5
-        wr = 0.5
-        dev = 1
 
         for i, v in enumerate(vehs.to_gen()):
             if v is not None:
@@ -156,25 +161,8 @@ class FeatureGenerator:
 
         return XX, YY
 
-    def ff(self, vv: list[AnnotationEntry]):
-        # XX = np.empty((0, 2 * (self.window_size + 1)))
-        XX = np.empty((0, 3 * (self.window_size + 1)))
-
-        YY = np.empty((0, 1))
-
-        for v in vv:
-            try:
-                vehicle = self.traffic.find_vehicle_with_id_and_containing_frames(veh_id=v.vehicle_id,
-                                                                                  frame_s=v.index_start,
-                                                                                  frame_end=v.index_end)
-
-                X = self._compute_input_matrix_for_vehicle_with_potential(vehicle=vehicle)
-                Y = self._compute_output_matrix_for_vehicle_annotation(vehicle_annotation=v)
-            except AssertionError:
-                continue
-
-            XX = np.vstack((XX, X))
-            YY = np.vstack((YY, Y))
+    def train(self, annotations: list[AnnotationEntry]):
+        XX, YY = self.create_input_and_output_matrices(annotations=annotations)
 
         clf = svm.SVC()
         clf.fit(XX, YY)
@@ -184,11 +172,8 @@ class FeatureGenerator:
         with open('bbb', 'wb') as f:
             pickle.dump(clf, f)
 
-        vehicle_to_test = self.traffic.vehicles[-4]
 
-        # self.try_out()
-
-    def try_out(self):
+    def predict(self):
         with open('aaa', 'rb') as f:
             clf = pickle.load(f)
 
@@ -260,6 +245,6 @@ if __name__ == '__main__':
                           window_size=50,
                           road_helper=road_helper)
 
-    fg.try_out()
+    fg.predict()
 
     pass
