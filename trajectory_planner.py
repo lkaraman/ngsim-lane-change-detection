@@ -1,13 +1,10 @@
-from dataclasses import dataclass
-
-import sympy as sp
-from sympy.tensor.array import derive_by_array
 import matplotlib.pyplot as plt
 import numpy as np
+import sympy as sp
 from sympy.utilities.lambdify import lambdify
 
 from trajectory_predictor import TrajectoryPredictor
-from utils import VehicleFrame, SurroundingVehicles, Trajectory, SemanticPosition, SemanticFrames
+from utils import VehicleFrame, Trajectory, SemanticPosition
 from visualize_predicted import PredictVisualizer
 
 wgx = 0.5
@@ -91,8 +88,8 @@ class TrajectoryPlanner:
         ])
 
 
-        f1 = lambdify([tp.x, tp.y], g1)
-        f2 = lambdify([tp.x, tp.y], g2)
+        f1 = lambdify([self.x, self.y], g1)
+        f2 = lambdify([self.x, self.y], g2)
 
         return f1, f2
 

@@ -199,6 +199,9 @@ class FeatureGenerator:
 
             nnn = np.where(a == 1)[0]
 
+            # Check whether collision takes place
+
+
             import matplotlib.pyplot as plt
 
             for r in self.road_helper.road.lanes.values():
