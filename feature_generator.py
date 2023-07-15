@@ -197,18 +197,10 @@ class FeatureGenerator:
                 x = sv[SemanticPosition.EGO].s
                 y = sv[SemanticPosition.EGO].d
 
-                x_l = [x]
-                y_l = [y]
-
-                for i in range(100):
-                    x = x + f1(x, y)
-                    y = y + f2(x, y)
-
-                    x_l.append(x)
-                    y_l.append(y)
+                trajectory = self.trajectory_planner.get_trajectory(f1=f1, f2=f2, x=x, y=y)
 
                 tp = TrajectoryPredictor(relevant_frames=sv,
-                                         trajectory=Trajectory(x=x_l, y=y_l))
+                                         trajectory=trajectory)
 
                 for i in np.arange(0.1, 4, 0.1):
                     tp.predict_for_dt(dt=i)

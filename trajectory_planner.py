@@ -98,6 +98,19 @@ class TrajectoryPlanner:
 
         return f1, f2
 
+    def get_trajectory(self, f1, f2, x, y) -> Trajectory:
+        x_l = [x]
+        y_l = [y]
+
+        for i in range(100):
+            x = x + f1(x, y)
+            y = y + f2(x, y)
+
+            x_l.append(x)
+            y_l.append(y)
+
+        return Trajectory(x=x_l, y=y_l)
+
 
 if __name__ == '__main__':
     tp = TrajectoryPlanner()
