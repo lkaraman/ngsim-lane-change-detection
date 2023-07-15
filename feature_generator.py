@@ -2,21 +2,24 @@ import json
 import pickle
 
 import numpy as np
+import matplotlib.pyplot as plt
+
 from dacite import from_dict
 from scipy.special import kn
 from sklearn import svm
 
 from road_helper import RoadHelper
-from structs import Traffic, Scenario
+from structs import Traffic, Scenario, AnnotationEntry, Trajectory
 from trajectory_planner import TrajectoryPlanner
 from trajectory_predictor import TrajectoryPredictor
 from utils import decorate_with_far_vehicles, SemanticPosition
-from utils import Vehicle, AnnotationEntry, \
-    get_surrounding_vehicles_frames, Trajectory
+from utils import Vehicle, \
+    get_surrounding_vehicles_frames
 
 
 class FeatureGenerator:
-    def __init__(self, traffic: Traffic, window_size: int,  road_helper: RoadHelper, use_potential_feature: bool = True,) -> None:
+    def __init__(self, traffic: Traffic, window_size: int, road_helper: RoadHelper,
+                 use_potential_feature: bool = True, ) -> None:
         if window_size % 2 != 0:
             raise ValueError('Window size must be even')
 
@@ -27,13 +30,12 @@ class FeatureGenerator:
 
         self.trajectory_planner = TrajectoryPlanner()
 
-
         self.model = None
 
     def _compute_output_matrix_for_vehicle_annotation(self, vehicle_annotation: AnnotationEntry) -> np.ndarray:
         vehicle = self.traffic.find_vehicle_with_id_and_containing_frames(veh_id=vehicle_annotation.vehicle_id,
-                                                                                   frame_s=vehicle_annotation.index_start,
-                                                                                   frame_end=vehicle_annotation.index_end)
+                                                                          frame_s=vehicle_annotation.index_start,
+                                                                          frame_end=vehicle_annotation.index_end)
         Y = np.empty((0, 1))
 
         for f in range(len(vehicle.frames)):
@@ -41,7 +43,6 @@ class FeatureGenerator:
             Y = np.vstack((Y, y))
 
         return Y
-
 
     def _append_potential_feature(self, to_pad, X: np.ndarray, vehicle: Vehicle) -> np.ndarray:
         potentials = [self.get_potential_feature(vehicle.object_id, f) for f in vehicle.frames]
@@ -59,11 +60,7 @@ class FeatureGenerator:
             x_pot = potentials_with_ghost_frames[f: f + self.window_size + 1]
             X_potential = np.vstack((X_potential, x_pot))
 
-
         return np.hstack((X, X_potential))
-
-
-
 
     def _compute_input_matrix_for_vehicle_with_potential(self, vehicle: Vehicle) -> np.ndarray:
         closest_distance_to_line_line = self.road_helper.closest_distance_to_lane_line(s=vehicle.s,
@@ -74,8 +71,6 @@ class FeatureGenerator:
         # For ghost frames we assume the closest distance is the same and lateral velocity is zero
         to_padd = self.window_size / 2
 
-
-
         closest_distance_start = closest_distance_to_line_line[0]
         closest_distance_end = closest_distance_to_line_line[-1]
         closest_distance_to_line_line_with_ghost_frames = np.hstack((np.repeat(closest_distance_start, to_padd),
@@ -84,8 +79,6 @@ class FeatureGenerator:
         lateral_velocity_with_ghost_frames = np.hstack((np.repeat(0, to_padd),
                                                         lateral_velocity,
                                                         np.repeat(0, to_padd)))
-
-
 
         X = np.empty((0, 2 * (self.window_size + 1)))
 
@@ -150,8 +143,8 @@ class FeatureGenerator:
         for v in annotations:
             try:
                 vehicle = self.traffic.find_vehicle_with_id_and_containing_frames(veh_id=v.vehicle_id,
-                                                                                           frame_s=v.index_start,
-                                                                                           frame_end=v.index_end)
+                                                                                  frame_s=v.index_start,
+                                                                                  frame_end=v.index_end)
 
                 X = self._compute_input_matrix_for_vehicle_with_potential(vehicle=vehicle)
                 Y = self._compute_output_matrix_for_vehicle_annotation(vehicle_annotation=v)
@@ -172,8 +165,8 @@ class FeatureGenerator:
         for v in vv:
             try:
                 vehicle = self.traffic.find_vehicle_with_id_and_containing_frames(veh_id=v.vehicle_id,
-                                                                                           frame_s=v.index_start,
-                                                                                           frame_end=v.index_end)
+                                                                                  frame_s=v.index_start,
+                                                                                  frame_end=v.index_end)
 
                 X = self._compute_input_matrix_for_vehicle_with_potential(vehicle=vehicle)
                 Y = self._compute_output_matrix_for_vehicle_annotation(vehicle_annotation=v)
@@ -187,7 +180,6 @@ class FeatureGenerator:
         clf.fit(XX, YY)
 
         self.model = clf
-
 
         with open('bbb', 'wb') as f:
             pickle.dump(clf, f)
@@ -239,8 +231,6 @@ class FeatureGenerator:
 
                 print(tp.collision_info)
 
-            import matplotlib.pyplot as plt
-
             for r in self.road_helper.road.lanes.values():
                 plt.plot(r.x, r.y, c='k')
 
@@ -258,12 +248,12 @@ class FeatureGenerator:
             return [1]
         return [0]
 
+
 if __name__ == '__main__':
     with open('/home/luka/WeekendProjects/ngim_lane_change_detection/DataAnnotator/scenario.json', 'r') as f:
         d = json.load(f)
 
     scenario = from_dict(Scenario, d)
-
 
     road_helper = RoadHelper(road=scenario.road)
     fg = FeatureGenerator(traffic=scenario.traffic,

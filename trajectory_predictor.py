@@ -1,7 +1,8 @@
 import itertools
 
-from utils import VehicleFrame, Trajectory, VehicleFrameWithInterpolation, SemanticPosition, \
-    SemanticFramesExtrapolation, SemanticFrames
+from structs import Trajectory, SemanticFramesExtrapolation, VehicleFrameWithInterpolation
+from utils import VehicleFrame, SemanticPosition, \
+    SemanticFrames
 from utils_collision import rotated_rectangles_intersect
 
 
@@ -44,5 +45,3 @@ class TrajectoryPredictor:
                 collision_info.append((i1, i2))
 
         self.collision_info.extend(collision_info)
-
-

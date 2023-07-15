@@ -3,8 +3,8 @@ import numpy as np
 import sympy as sp
 from sympy.utilities.lambdify import lambdify
 
+from structs import Trajectory, SemanticPosition, vehicle_far_far_away, VehicleFrame
 from trajectory_predictor import TrajectoryPredictor
-from utils import VehicleFrame, Trajectory, SemanticPosition, vehicle_far_far_away
 from visualize_predicted import PredictVisualizer
 
 wgx = 0.5
@@ -197,10 +197,3 @@ if __name__ == '__main__':
     print(tp.collision_info)
 
     vis = PredictVisualizer(tp.predicted_states, gradient_fnc=(f1, f2), traj=(x_l, y_l))
-
-
-
-
-
-
-    pass

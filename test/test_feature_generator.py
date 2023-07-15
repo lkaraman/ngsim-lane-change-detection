@@ -1,15 +1,13 @@
 from unittest.mock import Mock
 
 from feature_generator import FeatureGenerator
-from structs import Traffic
-from utils import Vehicle, AnnotationEntry
+from structs import Traffic, AnnotationEntry
+from utils import Vehicle
 
 import numpy.testing
 
 
 def test_feature_generator() -> None:
-
-
     vehicle = Vehicle(object_id=55,
                       s=[10, 20, 30],
                       d=[4, 4, 4],
