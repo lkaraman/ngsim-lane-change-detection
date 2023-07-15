@@ -7,12 +7,12 @@ from road_helper import RoadHelper
 from structs import Scenario, AnnotationEntry
 
 if __name__ == '__main__':
-    with open('/home/luka/WeekendProjects/ngim_lane_change_detection/DataAnnotator/scenario.json', 'r') as f:
+    with open('input/scenario.json', 'r') as f:
         d = json.load(f)
 
     scenario = from_dict(Scenario, d)
 
-    with open('/home/luka/WeekendProjects/ngim_lane_change_detection/DataAnnotator/lc_anno', 'r') as f:
+    with open('input/lc_anno.json', 'r') as f:
 
         annos: list[AnnotationEntry] = []
 

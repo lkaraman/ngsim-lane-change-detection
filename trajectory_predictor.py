@@ -1,7 +1,7 @@
 import itertools
 
 from structs import Trajectory, SemanticFramesExtrapolation, VehicleFrameWithInterpolation
-from utils import VehicleFrame, SemanticPosition, \
+from utils import SemanticPosition, \
     SemanticFrames
 from utils_collision import rotated_rectangles_intersect
 

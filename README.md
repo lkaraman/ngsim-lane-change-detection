@@ -7,7 +7,7 @@ Trajectory information is located in already provided csv file in the dataset an
 from the provided shapefiles (lanes were interpolated). Both were converted to json
 file format.
 
-![img.png](img.png)
+![img.png](images/img.png)
 
 By taking subset of the data we annotated around 150 situations where vehicle changes the lane
 to the right. This information is stored in lc_anno, and it is used for training of the SVM.
@@ -18,18 +18,19 @@ The workflow is as follows:
 
 
 
-![img_2.png](img_2.png)
+![img_2.png](images/img_2.png)
 
 _Example of correctly classified lane change by SVM_
 
 
 
-![img_1.png](img_1.png)
+![img_1.png](images/img_1.png)
 _Example of incorrectly classified lane change by SVM which will be corrected by the trajectory planner_
 
-![img_3.png](img_3.png)
+![img_3.png](images/img_3.png)
 _Example of incorrectly classified lane changes (first 2 from the left)_
 
 NOTES:
 - Trajectory is not filtered in any way
 - Features are not scaled (todo)
+- Collision check by overlapping bounding boxes script snatched from https://github.com/Farama-Foundation/HighwayEnv (thank you)
