@@ -9,6 +9,8 @@ from DataAnnotator.Utilities.commons import calculate_route_s_and_d
 
 from shapely import LineString
 
+from structs import Road, Vehicle, Lane
+
 
 def get_velocity(distance, time) -> list[float]:
     distance = np.array(distance)
@@ -19,64 +21,6 @@ def get_velocity(distance, time) -> list[float]:
     time_diff = np.diff(time)
     velocity = np.append(dist_diff[0] / time_diff[0], dist_diff / time_diff)
     return velocity.tolist()
-
-
-@dataclass
-class Lane:
-    x: List[float]
-    y: List[float]
-
-
-@dataclass
-class ReferenceLine:
-    x: List[float]
-    y: List[float]
-
-
-@dataclass
-class Road:
-    reference_line: ReferenceLine
-    lanes: Dict[str, Lane]
-
-
-@dataclass
-class Vehicle:
-    object_id: int
-    s: List[float]
-    d: List[float]
-    times: List[float]
-    frames: List[int]
-    length: List[float]
-    width: List[float]
-    vs: List[float]
-    vd: List[float]
-    lanes: List[int]
-
-    def plot(self, var_name):
-        v = getattr(self, var_name)
-        plt.plot(self.times, v)
-        plt.show()
-
-
-@dataclass
-class Traffic:
-    vehicles: List[Vehicle]
-
-    def find_vehicle_with_id_and_start_and_end_frames(self, veh_id: str, frame_s: int, frame_end: int):
-        l = [v for v in self.vehicles if v.object_id == veh_id and v.frames[0] == frame_s and v.frames[-1] == frame_end]
-        assert len(l) == 1
-        return l[0]
-
-    def find_vehicle_with_id_and_containing_frames(self, veh_id: int, frame_s: int, frame_end: int) -> Vehicle:
-        l = [v for v in self.vehicles if v.object_id == veh_id and v.frames[0] <= frame_s and v.frames[-1] >= frame_end]
-        assert len(l) == 1
-        return l[0]
-
-
-@dataclass
-class Scenario:
-    road: Road
-    traffic: Traffic
 
 
 def find_timespan_in_ms(df_global) -> int:

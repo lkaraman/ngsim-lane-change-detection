@@ -1,7 +1,8 @@
 from unittest.mock import Mock
 
 from feature_generator import FeatureGenerator
-from utils import Vehicle, Traffic, AnnotationEntry
+from structs import Traffic
+from utils import Vehicle, AnnotationEntry
 
 import numpy.testing
 

@@ -7,10 +7,11 @@ from scipy.special import kn
 from sklearn import svm
 
 from road_helper import RoadHelper
+from structs import Traffic, Scenario
 from trajectory_planner import TrajectoryPlanner
 from trajectory_predictor import TrajectoryPredictor
-from utils import Scenario, decorate_with_far_vehicles, SemanticPosition
-from utils import Vehicle, AnnotationEntry, Traffic, \
+from utils import decorate_with_far_vehicles, SemanticPosition
+from utils import Vehicle, AnnotationEntry, \
     get_surrounding_vehicles_frames, Trajectory
 
 
@@ -241,11 +242,15 @@ class FeatureGenerator:
             import matplotlib.pyplot as plt
 
             for r in self.road_helper.road.lanes.values():
-                plt.plot(r.x, r.y, c='b')
+                plt.plot(r.x, r.y, c='k')
 
-            plt.plot(vehicle_to_test.s, vehicle_to_test.d)
-            for n in nnn:
-                plt.scatter(vehicle_to_test.s[n], vehicle_to_test.d[n], c='r')
+            plt.plot(vehicle_to_test.s, vehicle_to_test.d, label='vehicle trajectory')
+            s_det = np.asarray(vehicle_to_test.s)[nnn]
+            d_det = np.asarray(vehicle_to_test.d)[nnn]
+            # for n in nnn:
+            #     plt.scatter(vehicle_to_test.s[n], vehicle_to_test.d[n], c='r', label='detected lane change')
+            plt.scatter(s_det, d_det, c='r', label='detected lane change')
+            plt.legend()
             plt.show()
 
     def get_y_for_vehicle(self, veh_anno: AnnotationEntry, global_frame: int):
