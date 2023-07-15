@@ -1,5 +1,7 @@
-from utils import Road
+
 from shapely.geometry import Point, LineString, MultiLineString
+
+from structs import Road
 
 
 class RoadHelper:
