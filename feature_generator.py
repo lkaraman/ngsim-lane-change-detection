@@ -232,19 +232,3 @@ class FeatureGenerator:
         if veh_anno.index_start <= global_frame <= veh_anno.index_end:
             return [1]
         return [0]
-
-
-if __name__ == '__main__':
-    with open('/home/luka/WeekendProjects/ngim_lane_change_detection/DataAnnotator/scenario.json', 'r') as f:
-        d = json.load(f)
-
-    scenario = from_dict(Scenario, d)
-
-    road_helper = RoadHelper(road=scenario.road)
-    fg = FeatureGenerator(traffic=scenario.traffic,
-                          window_size=50,
-                          road_helper=road_helper)
-
-    fg.predict()
-
-    pass
