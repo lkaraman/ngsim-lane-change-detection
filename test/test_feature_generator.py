@@ -23,6 +23,7 @@ def test_feature_generator() -> None:
 
     road_helper = Mock()
     road_helper.closest_distance_to_lane_line.return_value = [1.0, 2.0, 3.0]
+    road_helper.road.lanes = {0: [3.5]}
 
     feature_generator = FeatureGenerator(traffic=traffic,
                                          window_size=2,

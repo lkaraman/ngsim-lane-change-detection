@@ -136,7 +136,6 @@ def convert_dataframe_to_vehicle(df, road: Road, initial_time) -> Vehicle:
     )
 
 
-
 class SemanticPosition(Enum):
     EGO = auto()
     SAME_FRONT = auto()
@@ -157,6 +156,18 @@ class VehicleFrame:
     length: float
     velocity: float
     yaw: Optional[float] = 0
+
+vehicle_far_far_away = VehicleFrame(
+    object_id=-1,
+    s=10000000,
+    d=10000000,
+    lane=0,
+    is_ego=False,
+    width=0,
+    length=0,
+    velocity=0,
+    yaw=0
+)
 
 
 @dataclass
@@ -207,16 +218,41 @@ class VehicleFrameWithInterpolation:
             yaw=yaw
         )
 
+
 SemanticFrames = dict[SemanticPosition, VehicleFrame]
 SemanticFramesExtrapolation = dict[SemanticPosition, VehicleFrameWithInterpolation]
 
 
 @dataclass(frozen=True)
-class SurroundingVehicles:
+class SurroundingVehicleFrames:
     vehicle_current_lane_front: VehicleFrame
     vehicle_current_lane_back: VehicleFrame
     vehicle_next_lane_front: VehicleFrame
     vehicle_next_lane_back: VehicleFrame
+    ego: VehicleFrame
+
+    def to_gen(self):
+        yield self.vehicle_current_lane_front
+        yield self.vehicle_current_lane_back
+        yield self.vehicle_next_lane_front
+        yield self.vehicle_next_lane_back
+
+    def as_dict(self) -> SemanticFrames:
+        return {
+            SemanticPosition.SAME_BACK: self.vehicle_current_lane_back,
+            SemanticPosition.SAME_FRONT: self.vehicle_current_lane_front,
+            SemanticPosition.NEXT_BACK: self.vehicle_next_lane_back,
+            SemanticPosition.NEXT_FRONT: self.vehicle_next_lane_front,
+            SemanticPosition.EGO: self.ego
+        }
+
+def decorate_with_far_vehicles(semantic_frames: SemanticFrames) -> SemanticFrames:
+        semantic_frames[SemanticPosition.SAME_BACK] = semantic_frames[SemanticPosition.SAME_BACK] or vehicle_far_far_away
+        semantic_frames[SemanticPosition.SAME_FRONT] = semantic_frames[SemanticPosition.SAME_FRONT] or vehicle_far_far_away
+        semantic_frames[SemanticPosition.NEXT_BACK] = semantic_frames[SemanticPosition.NEXT_BACK] or vehicle_far_far_away
+        semantic_frames[SemanticPosition.NEXT_FRONT] = semantic_frames[SemanticPosition.NEXT_FRONT] or vehicle_far_far_away
+
+        return semantic_frames
 
 
 def current_lane(d, lane_lines: List[Lane]):
@@ -290,6 +326,8 @@ def split_vf_for_ego(vfl: List[VehicleFrame]) -> (VehicleFrame, List[VehicleFram
 
 
 def find_vehicle_in_frame(veh_id: int, veh_frames: list[VehicleFrame]):
+    if veh_id == -1:
+        return None
     l = [vf for vf in veh_frames if vf.object_id == veh_id]
     assert len(l) == 1
 
@@ -319,7 +357,6 @@ def find_id_by_semantic_position(ego: VehicleFrame, fellows: List[VehicleFrame],
     else:
         raise AttributeError('Semantic position not valid!')
 
-
     rel_s = []
     for f in fellows:
         if condition_lat(f) and condition_long(f):
@@ -337,3 +374,28 @@ class AnnotationEntry:
     vehicle_id: int
     index_start: int
     index_end: int
+
+
+def get_surrounding_vehicles_frames(ego_id, frame, vehicles, lane_lines):
+    vehicle_frame = convert_to_vehicle_frame(ego_id=ego_id,
+                                             frame=frame,
+                                             vehicles=vehicles,
+                                             lane_lines=lane_lines)
+
+    ego, fellows = split_vf_for_ego(vehicle_frame)
+
+    back_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.SAME_BACK)
+    front_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.SAME_FRONT)
+    left_back_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.NEXT_BACK)
+    left_front_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.NEXT_FRONT)
+
+    back = find_vehicle_in_frame(veh_id=back_id, veh_frames=vehicle_frame)
+    front = find_vehicle_in_frame(veh_id=front_id, veh_frames=vehicle_frame)
+    left_back = find_vehicle_in_frame(veh_id=left_back_id, veh_frames=vehicle_frame)
+    left_front = find_vehicle_in_frame(veh_id=left_front_id, veh_frames=vehicle_frame)
+    return SurroundingVehicleFrames(vehicle_current_lane_front=front,
+                                    vehicle_current_lane_back=back,
+                                    vehicle_next_lane_front=left_front,
+                                    vehicle_next_lane_back=left_back,
+                                    ego=ego
+                                    )

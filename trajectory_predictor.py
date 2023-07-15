@@ -40,7 +40,7 @@ class TrajectoryPredictor:
             pos1 = ([f1.s, f1.d], f1.length, f1.width, f1.yaw)
             pos2 = ([f2.s, f2.d], f2.length, f2.width, f2.yaw)
 
-            if rotated_rectangles_intersect(rect1=pos1, rect2=pos2):
+            if rotated_rectangles_intersect(rect1=pos1, rect2=pos2) and (f1.is_ego or f2.is_ego):
                 collision_info.append((i1, i2))
 
         self.collision_info.extend(collision_info)

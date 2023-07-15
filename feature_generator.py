@@ -1,11 +1,17 @@
+import json
+import pickle
+
 import numpy as np
+from dacite import from_dict
 from scipy.special import kn
 from sklearn import svm
 
 from road_helper import RoadHelper
-from utils import Vehicle, AnnotationEntry, convert_to_vehicle_frame, split_vf_for_ego, find_vehicle_in_frame, Traffic, \
-    find_id_by_semantic_position, \
-    SemanticPosition
+from trajectory_planner import TrajectoryPlanner
+from trajectory_predictor import TrajectoryPredictor
+from utils import Scenario, decorate_with_far_vehicles, SemanticPosition
+from utils import Vehicle, AnnotationEntry, Traffic, \
+    get_surrounding_vehicles_frames, Trajectory
 
 
 class FeatureGenerator:
@@ -17,6 +23,8 @@ class FeatureGenerator:
         self.window_size = window_size
         self.road_helper = road_helper
         self.use_potential_feature = use_potential_feature
+
+        self.trajectory_planner = TrajectoryPlanner()
 
 
         self.model = None
@@ -95,19 +103,10 @@ class FeatureGenerator:
                                               X=X)
 
     def get_potential_feature(self, ego_id: int, frame: int) -> float:
-        vehicle_frame = convert_to_vehicle_frame(ego_id=ego_id,
-                                                 frame=frame,
-                                                 vehicles=self.traffic.vehicles,
-                                                 lane_lines=list(self.road_helper.road.lanes.values()))
-
-        ego, fellows = split_vf_for_ego(vehicle_frame)
-
-        back_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.SAME_BACK)
-        front_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.SAME_FRONT)
-        left_back_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.NEXT_BACK)
-        left_front_id = find_id_by_semantic_position(ego, fellows, semantic=SemanticPosition.NEXT_FRONT)
-
-        vehs = (back_id, front_id, left_back_id, left_front_id)
+        vehs = get_surrounding_vehicles_frames(ego_id=ego_id,
+                                               frame=frame,
+                                               vehicles=self.traffic.vehicles,
+                                               lane_lines=list(self.road_helper.road.lanes.values()))
 
         pot = []
 
@@ -118,11 +117,10 @@ class FeatureGenerator:
         wr = 0.5
         dev = 1
 
-        for i, v in enumerate(vehs):
-            if v != -1:
-                rel_v = find_vehicle_in_frame(veh_id=v, veh_frames=vehicle_frame)
-                relative_distance = abs(rel_v.s - ego.s)
-                relative_velocity = abs(rel_v.velocity - ego.velocity)
+        for i, v in enumerate(vehs.to_gen()):
+            if v is not None:
+                relative_distance = abs(v.s - vehs.ego.s)
+                relative_velocity = abs(v.velocity - vehs.ego.velocity)
             else:
                 relative_distance = 50
                 relative_velocity = 0.0
@@ -189,7 +187,17 @@ class FeatureGenerator:
 
         self.model = clf
 
+
+        with open('bbb', 'wb') as f:
+            pickle.dump(clf, f)
+
         vehicle_to_test = self.traffic.vehicles[-4]
+
+        # self.try_out()
+
+    def try_out(self):
+        with open('aaa', 'rb') as f:
+            clf = pickle.load(f)
 
         for vehicle_to_test in self.traffic.vehicles[1900:2000]:
             x_to_test = self._compute_input_matrix_for_vehicle_with_potential(vehicle=vehicle_to_test)
@@ -198,9 +206,37 @@ class FeatureGenerator:
             print(a)
 
             nnn = np.where(a == 1)[0]
+            if len(nnn) > 0:
+                sv = get_surrounding_vehicles_frames(ego_id=vehicle_to_test.object_id,
+                                                     frame=vehicle_to_test.frames[nnn[0]],
+                                                     vehicles=self.traffic.vehicles,
+                                                     lane_lines=list(self.road_helper.road.lanes.values()))
+                sv = decorate_with_far_vehicles(sv.as_dict())
 
-            # Check whether collision takes place
+                f1, f2 = self.trajectory_planner.get_field_functions(surrounding_vehicles_frame=sv)
 
+                # Check whether collision takes place
+                x = sv[SemanticPosition.EGO].s
+                y = sv[SemanticPosition.EGO].d
+
+                x_l = [x]
+                y_l = [y]
+
+                for i in range(100):
+                    x = x + f1(x, y)
+                    y = y + f2(x, y)
+
+                    x_l.append(x)
+                    y_l.append(y)
+
+                tp = TrajectoryPredictor(relevant_frames=sv,
+                                         trajectory=Trajectory(x=x_l, y=y_l))
+
+                for i in np.arange(0.1, 4, 0.1):
+                    tp.predict_for_dt(dt=i)
+                    tp.is_collision_in_predicted()
+
+                print(tp.collision_info)
 
             import matplotlib.pyplot as plt
 
@@ -216,3 +252,19 @@ class FeatureGenerator:
         if veh_anno.index_start <= global_frame <= veh_anno.index_end:
             return [1]
         return [0]
+
+if __name__ == '__main__':
+    with open('/home/luka/WeekendProjects/ngim_lane_change_detection/DataAnnotator/scenario.json', 'r') as f:
+        d = json.load(f)
+
+    scenario = from_dict(Scenario, d)
+
+
+    road_helper = RoadHelper(road=scenario.road)
+    fg = FeatureGenerator(traffic=scenario.traffic,
+                          window_size=50,
+                          road_helper=road_helper)
+
+    fg.try_out()
+
+    pass

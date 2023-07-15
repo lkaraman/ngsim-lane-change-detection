@@ -4,7 +4,7 @@ import sympy as sp
 from sympy.utilities.lambdify import lambdify
 
 from trajectory_predictor import TrajectoryPredictor
-from utils import VehicleFrame, Trajectory, SemanticPosition
+from utils import VehicleFrame, Trajectory, SemanticPosition, vehicle_far_far_away
 from visualize_predicted import PredictVisualizer
 
 wgx = 0.5
@@ -64,27 +64,27 @@ class TrajectoryPlanner:
         g1 = self.dU[0].subs([
             [self.l_up, 3.5],
             [self.l_down, 0],
-            [self.x_other[0], surrounding_vehicles_frame[SemanticPosition.SAME_BACK].s],
-            [self.y_other[0], surrounding_vehicles_frame[SemanticPosition.SAME_BACK].d],
-            [self.x_other[1], surrounding_vehicles_frame[SemanticPosition.SAME_FRONT].s],
-            [self.y_other[1], surrounding_vehicles_frame[SemanticPosition.SAME_FRONT].d],
-            [self.x_other[2], surrounding_vehicles_frame[SemanticPosition.NEXT_BACK].s],
-            [self.y_other[2], surrounding_vehicles_frame[SemanticPosition.NEXT_BACK].d],
-            [self.x_other[3], surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT].s],
-            [self.y_other[3], surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT].d],
+            [self.x_other[0], (surrounding_vehicles_frame[SemanticPosition.SAME_BACK] or vehicle_far_far_away).s],
+            [self.y_other[0], (surrounding_vehicles_frame[SemanticPosition.SAME_BACK] or vehicle_far_far_away).d],
+            [self.x_other[1], (surrounding_vehicles_frame[SemanticPosition.SAME_FRONT] or vehicle_far_far_away).s],
+            [self.y_other[1], (surrounding_vehicles_frame[SemanticPosition.SAME_FRONT] or vehicle_far_far_away).d],
+            [self.x_other[2], (surrounding_vehicles_frame[SemanticPosition.NEXT_BACK] or vehicle_far_far_away).s],
+            [self.y_other[2], (surrounding_vehicles_frame[SemanticPosition.NEXT_BACK] or vehicle_far_far_away).d],
+            [self.x_other[3], (surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT] or vehicle_far_far_away).s],
+            [self.y_other[3], (surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT] or vehicle_far_far_away).d],
         ])
 
         g2 = self.dU[1].subs([
             [self.l_up, 3.5],
             [self.l_down, 0],
-            [self.x_other[0], surrounding_vehicles_frame[SemanticPosition.SAME_BACK].s],
-            [self.y_other[0], surrounding_vehicles_frame[SemanticPosition.SAME_BACK].d],
-            [self.x_other[1], surrounding_vehicles_frame[SemanticPosition.SAME_FRONT].s],
-            [self.y_other[1], surrounding_vehicles_frame[SemanticPosition.SAME_FRONT].d],
-            [self.x_other[2], surrounding_vehicles_frame[SemanticPosition.NEXT_BACK].s],
-            [self.y_other[2], surrounding_vehicles_frame[SemanticPosition.NEXT_BACK].d],
-            [self.x_other[3], surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT].s],
-            [self.y_other[3], surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT].d],
+            [self.x_other[0], (surrounding_vehicles_frame[SemanticPosition.SAME_BACK] or vehicle_far_far_away).s],
+            [self.y_other[0], (surrounding_vehicles_frame[SemanticPosition.SAME_BACK] or vehicle_far_far_away).d],
+            [self.x_other[1], (surrounding_vehicles_frame[SemanticPosition.SAME_FRONT] or vehicle_far_far_away).s],
+            [self.y_other[1], (surrounding_vehicles_frame[SemanticPosition.SAME_FRONT] or vehicle_far_far_away).d],
+            [self.x_other[2], (surrounding_vehicles_frame[SemanticPosition.NEXT_BACK] or vehicle_far_far_away).s],
+            [self.y_other[2], (surrounding_vehicles_frame[SemanticPosition.NEXT_BACK] or vehicle_far_far_away).d],
+            [self.x_other[3], (surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT] or vehicle_far_far_away).s],
+            [self.y_other[3], (surrounding_vehicles_frame[SemanticPosition.NEXT_FRONT] or vehicle_far_far_away).d],
         ])
 
 
