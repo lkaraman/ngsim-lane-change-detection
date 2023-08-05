@@ -1,5 +1,6 @@
-The idea of this repo is to reimplement the ideas from the article
+The idea of this repo is to reimplement the ideas from the article (not associated with authors in any way)
 [Lane-Change Detection Based on Vehicle-Trajectory Prediction](https://ieeexplore.ieee.org/document/7835731)
+
 
 In other words, we using SVM and treating the lane change detection as a classification problem. Afterward, we are using the trajectory prediction to remove some of the false positives in case a collision in planned trajectory occurs
 (please see the article for more details). **In this implementation, we are considering on lane changes to the left lane**.
