@@ -18,8 +18,6 @@ wa = 0.5
 theta_ax = 1.0
 theta_ay = 1.0
 theta_s = 1.0
-
-
 # --------------------------------
 
 def gradient(f):

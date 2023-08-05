@@ -35,5 +35,5 @@ if __name__ == '__main__':
                           window_size=50,
                           road_helper=road_helper)
 
-    # fg.train(annotations=annos)
+    fg.train(annotations=annos)
     fg.predict()

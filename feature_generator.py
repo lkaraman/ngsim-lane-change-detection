@@ -1,20 +1,15 @@
-import json
-import pickle
-
-import numpy as np
 import matplotlib.pyplot as plt
-
-from dacite import from_dict
+import numpy as np
 from scipy.special import kn
 from sklearn import svm
 
 from road_helper import RoadHelper
-from structs import Traffic, Scenario, AnnotationEntry, Trajectory
+from structs import Traffic, AnnotationEntry
 from trajectory_planner import TrajectoryPlanner
 from trajectory_predictor import TrajectoryPredictor
-from utils import decorate_with_far_vehicles, SemanticPosition
 from utils import Vehicle, \
     get_surrounding_vehicles_frames
+from utils import decorate_with_far_vehicles, SemanticPosition
 
 # --------------------------------
 # Parameters for the potential feature
@@ -154,6 +149,9 @@ class FeatureGenerator:
                 X = self._compute_input_matrix_for_vehicle_with_potential(vehicle=vehicle)
                 Y = self._compute_output_matrix_for_vehicle_annotation(vehicle_annotation=v)
             except AssertionError:
+                # It seems NGSIM there are data issues in some of the entries which were converted to json
+                # Really ugly way catching this assertion which will be removed
+                # Just ignore the vehicle which has this 'frame problem'
                 continue
 
             XX = np.vstack((XX, X))
@@ -169,13 +167,14 @@ class FeatureGenerator:
 
         self.model = clf
 
-        with open('bbb', 'wb') as f:
-            pickle.dump(clf, f)
+        # with open('bbb', 'wb') as f:
+        #     pickle.dump(clf, f)
 
 
     def predict(self):
-        with open('aaa', 'rb') as f:
-            clf = pickle.load(f)
+        # with open('aaa', 'rb') as f:
+        #     clf = pickle.load(f)
+        clf = self.model
 
         for vehicle_to_test in self.traffic.vehicles[1900:2000]:
             x_to_test = self._compute_input_matrix_for_vehicle_with_potential(vehicle=vehicle_to_test)
