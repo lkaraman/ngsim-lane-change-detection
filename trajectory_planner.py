@@ -1,11 +1,7 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import sympy as sp
 from sympy.utilities.lambdify import lambdify
 
 from structs import Trajectory, SemanticPosition, vehicle_far_far_away, VehicleFrame
-from trajectory_predictor import TrajectoryPredictor
-from visualize_predicted import PredictVisualizer
 
 # --------------------------------
 # Parameters for the planner
